@@ -1,0 +1,131 @@
+def configDir = new File(rootDir, 'config')
+
+buildscript {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
+        jcenter()
+    }
+
+    dependencies {
+    }
+}
+
+task wrapper(type: Wrapper) {
+    gradleVersion = '1.11'
+}
+
+allprojects {
+    apply plugin: 'java'
+    apply plugin: 'idea'
+    apply plugin: 'eclipse'
+    apply plugin: 'checkstyle'
+    apply plugin: 'findbugs'
+
+    repositories {
+        mavenCentral()
+        mavenLocal()
+        maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
+    }
+
+    dependencies {
+        compile 'org.slf4j:slf4j-api:1.7.7'
+        
+        testCompile 'org.slf4j:slf4j-simple:1.7.7'
+        testCompile 'org.testng:testng:6.8'
+    }
+
+    configurations {
+        provided
+        provided.extendsFrom(compile)
+    }
+
+    group = 'com.antwerkz.fengshui'
+    version = '0.1-SNAPSHOT'
+
+    sourceCompatibility = JavaVersion.VERSION_1_7
+    targetCompatibility = JavaVersion.VERSION_1_7
+
+    task listDependencies << {
+        configurations.compile.each { File file -> println file }
+    }
+
+
+    sourceSets.main.compileClasspath += configurations.provided
+    sourceSets.test.compileClasspath += configurations.provided
+    sourceSets.test.runtimeClasspath += configurations.provided
+
+    if (properties['xlint']) {
+        tasks.withType(Compile) {
+            options.compilerArgs << "-Xlint:unchecked"
+        }
+    }
+
+    project.ext.buildingWith = {
+        n -> project.hasProperty(n) && project.property(n).toBoolean()
+    }
+
+    javadoc {
+        classpath += configurations.provided
+    }
+
+    checkstyle {
+        configFile = new File("$configDir/checkstyle.xml")
+    }
+
+    checkstyleMain {
+        classpath += configurations.compile
+    }
+
+    checkstyleTest {
+        classpath += configurations.compile
+    }
+
+    findbugs {
+        excludeFilter = new File("$configDir/findbugs-exclude.xml")
+    }
+
+    tasks.withType(AbstractCompile) {
+        options.encoding = 'ISO-8859-1'
+        options.fork = true
+        options.debug = true
+        options.compilerArgs = ['-Xlint:deprecation', '-Xlint:-options']
+    }
+
+    tasks.withType(FindBugs) {
+        reports {
+            xml.enabled = project.buildingWith('xmlReports.enabled')
+            html.enabled = !project.buildingWith('xmlReports.enabled')
+        }
+    }
+
+    javadoc {
+        options.author = true
+        options.version = true
+        options.links 'http://docs.oracle.com/javase/6/docs/api/'
+    }
+
+    test {
+        // set heap size for the test JVM(s)
+        minHeapSize = "256m"
+        maxHeapSize = "512m"
+
+        // set JVM arguments for the test JVM(s)
+        jvmArgs '-XX:MaxPermSize=256m'
+        
+        useTestNG()
+    }
+
+}
+
+project(':core') {
+
+    dependencies {
+        compile 'org.eclipse.jgit:org.eclipse.jgit:3.3.1.201403241930-r'
+        testCompile 'com.jayway.awaitility:awaitility:1.5.0'
+    }
+}
+
+apply from: 'gradle/ide-settings.gradle'
+//apply from: 'gradle/maven-deployment.gradle'
