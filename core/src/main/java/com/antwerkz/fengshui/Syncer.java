@@ -3,21 +3,14 @@ package com.antwerkz.fengshui;
 import org.eclipse.jgit.api.CloneCommand;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
-import org.eclipse.jgit.lib.Repository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.FileVisitResult;
-import java.nio.file.FileVisitor;
 import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.attribute.BasicFileAttributes;
 
 import static java.lang.String.format;
-import static java.nio.file.StandardCopyOption.COPY_ATTRIBUTES;
-import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 
 public class Syncer {
     private static final Logger LOG = LoggerFactory.getLogger(Syncer.class);
@@ -49,35 +42,8 @@ public class Syncer {
                           .setDirectory(settingsMirror)
                           .call();
         }
-        Files.walkFileTree(settingsMirror.toPath(), new FileVisitor<Path>() {
-            @Override
-            public FileVisitResult preVisitDirectory(final Path dir, final BasicFileAttributes attrs) throws IOException {
-                return dir.getFileName().toString().equals(".git")
-                       ? FileVisitResult.SKIP_SUBTREE
-                       : FileVisitResult.CONTINUE;
-            }
-
-            @Override
-            public FileVisitResult visitFile(final Path file, final BasicFileAttributes attrs) throws IOException {
-                String relative = file.toString().substring(settingsMirror.toString().length() + 1);
-                File destination = new File(target, relative);
-                if (!destination.exists()
-                    || Files.getLastModifiedTime(destination.toPath()).toMillis() < Files.getLastModifiedTime(file).toMillis()) {
-                    destination.getParentFile().mkdirs();
-                    Files.copy(file, destination.toPath(), REPLACE_EXISTING, COPY_ATTRIBUTES);
-                }
-                return FileVisitResult.CONTINUE;
-            }
-
-            @Override
-            public FileVisitResult visitFileFailed(final Path file, final IOException exc) throws IOException {
-                throw new UnsupportedOperationException("Not implemented yet!");
-            }
-
-            @Override
-            public FileVisitResult postVisitDirectory(final Path dir, final IOException exc) throws IOException {
-                return FileVisitResult.CONTINUE;
-            }
-        });
+        
+        Files.walkFileTree(settingsMirror.toPath(), new SynchronizingFileVisitor(settingsMirror, target));
     }
+
 }
