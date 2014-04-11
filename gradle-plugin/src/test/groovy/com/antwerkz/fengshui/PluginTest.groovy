@@ -8,12 +8,13 @@ import static org.testng.Assert.assertTrue
 
 public class PluginTest {
     private Project project
+    private File buildDir
 
     @BeforeMethod
     public createProject() {
         project = ProjectBuilder.builder().build()
-        this.project.apply plugin: 'fengshui'
-        this.project.setBuildDir(new File("build").getAbsoluteFile())
+        buildDir = project.getBuildDir()
+        project.apply plugin: 'fengshui'
     }
 
     @Test
@@ -24,12 +25,12 @@ public class PluginTest {
 
         project.tasks.sync.sync()
         assertTrue(new File("fengshui", "file1").exists())
-        assertTrue(new File("build/fengshui/mirror", "file1").exists())
+        assertTrue(new File(buildDir, "fengshui/mirror/file1").exists())
     }
 
     @Test
     public void overrides() {
-        def synced = new File("build/synced")
+        def synced = new File(buildDir, "synced")
 
         project.task("sync", type: SyncFilesTask) {
             gitUrl = new File("../core/build/remote.git").toURI().toURL().toString()
