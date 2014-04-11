@@ -23,34 +23,33 @@ public class Syncer {
     private static final Logger LOG = LoggerFactory.getLogger(Syncer.class);
     private final String gitUrl;
     private final String tag;
-    private final File localGitDir;
-    private File syncTarget = new File(".").getAbsoluteFile();
+    private final File settingsMirror;
+    private File target = new File(".").getAbsoluteFile();
 
-    public Syncer(final String gitUrl, final String tag, final File localGitDir) {
+    public Syncer(final String gitUrl, final String tag, final File settingsMirror) {
         this.gitUrl = gitUrl;
         this.tag = tag;
-        this.localGitDir = localGitDir;
+        this.settingsMirror = settingsMirror;
     }
 
-    public File getSyncTarget() {
-        return syncTarget;
+    public File getTarget() {
+        return target;
     }
 
-    public void setSyncTarget(final File syncTarget) {
-        this.syncTarget = syncTarget.getAbsoluteFile();
+    public void setTarget(final File syncTarget) {
+        this.target = syncTarget.getAbsoluteFile();
     }
 
     public void execute() throws IOException, GitAPIException {
-        if (!localGitDir.exists()) {
-            LOG.info(format("Cloning %s in to %s", gitUrl, localGitDir));
+        if (!settingsMirror.exists()) {
+            LOG.info(format("Cloning %s in to %s", gitUrl, settingsMirror));
             Git git = new CloneCommand()
                           .setURI(gitUrl)
                           .setBranch(tag)
-                          .setDirectory(localGitDir)
+                          .setDirectory(settingsMirror)
                           .call();
-            Repository repository = git.getRepository();
         }
-        Files.walkFileTree(localGitDir.toPath(), new FileVisitor<Path>() {
+        Files.walkFileTree(settingsMirror.toPath(), new FileVisitor<Path>() {
             @Override
             public FileVisitResult preVisitDirectory(final Path dir, final BasicFileAttributes attrs) throws IOException {
                 return dir.getFileName().toString().equals(".git")
@@ -60,10 +59,10 @@ public class Syncer {
 
             @Override
             public FileVisitResult visitFile(final Path file, final BasicFileAttributes attrs) throws IOException {
-                String relative = file.toString().substring(localGitDir.toString().length()+1);
-                File destination = new File(syncTarget, relative);
-                if(!destination.exists() 
-                   || Files.getLastModifiedTime(destination.toPath()).toMillis() < Files.getLastModifiedTime(file).toMillis()) {
+                String relative = file.toString().substring(settingsMirror.toString().length() + 1);
+                File destination = new File(target, relative);
+                if (!destination.exists()
+                    || Files.getLastModifiedTime(destination.toPath()).toMillis() < Files.getLastModifiedTime(file).toMillis()) {
                     destination.getParentFile().mkdirs();
                     Files.copy(file, destination.toPath(), REPLACE_EXISTING, COPY_ATTRIBUTES);
                 }

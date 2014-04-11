@@ -114,7 +114,7 @@ public class SyncerTest {
     @Test
     public void testExecute() throws Exception {
         Syncer syncer = new Syncer(gitUrl, "master", localDir);
-        syncer.setSyncTarget(syncTarget);
+        syncer.setTarget(syncTarget);
         syncer.execute();
         List<Path> local = listFiles(localDir.toPath());
         List<Path> sync = listFiles(syncTarget.toPath());
